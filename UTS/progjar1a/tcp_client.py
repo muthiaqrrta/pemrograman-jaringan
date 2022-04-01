@@ -3,19 +3,54 @@ import socket
 import json
 import logging
 import xmltodict
+import ssl
+import os
 
-server_address = ('127.0.0.1', 12000)
+server_address = ('172.16.16.101', 12000)
 
+def make_socket(destination_address='localhost',port=12000):
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_address = (destination_address, port)
+        logging.warning(f"connecting to {server_address}")
+        sock.connect(server_address)
+        return sock
+    except Exception as ee:
+        logging.warning(f"error {str(ee)}")
 
-def getdatapemain(nomor=0):
-    cmd=f"getdatapemain {nomor}"
-    hasil = send_command(cmd)
-    return hasil
+def make_secure_socket(destination_address='localhost',port=10000):
+    try:
+        #get it from https://curl.se/docs/caextract.html
 
+        context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+        context.verify_mode=ssl.CERT_OPTIONAL
+        context.load_verify_locations(os.getcwd() + '/domain.crt')
 
-def send_command(command_str):
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect(server_address)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_address = (destination_address, port)
+        logging.warning(f"connecting to {server_address}")
+        sock.connect(server_address)
+        secure_socket = context.wrap_socket(sock,server_hostname=destination_address)
+        logging.warning(secure_socket.getpeercert())
+        return secure_socket
+    except Exception as ee:
+        logging.warning(f"error {str(ee)}")
+
+def deserialisasi(s):
+    logging.warning(f"deserialisasi {s.strip()}")
+    return json.loads(s)
+    
+
+def send_command(command_str,is_secure=False):
+    alamat_server = server_address[0]
+    port_server = server_address[1]
+#    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+# gunakan fungsi diatas
+    if is_secure == True:
+        sock = make_secure_socket(alamat_server,port_server)
+    else:
+        sock = make_socket(alamat_server,port_server)
+
     logging.warning(f"connecting to {server_address}")
     try:
         logging.warning(f"sending message ")
@@ -35,16 +70,52 @@ def send_command(command_str):
                 break
         # at this point, data_received (string) will contain all data coming from the socket
         # to be able to use the data_received as a dict, need to load it using json.loads()
-        hasil = json.loads(data_received)
+        hasil = deserialisasi(data_received)
         logging.warning("data received from server:")
         return hasil
-    except:
-        logging.warning("error during data receiving")
+    except Exception as ee:
+        logging.warning(f"error during data receiving {str(ee)}")
         return False
 
 
+
+def getdatapemain(nomor=0,is_secure=False):
+    cmd=f"getdatapemain {nomor}\r\n\r\n"
+    hasil = send_command(cmd,is_secure=is_secure)
+    return hasil
+
+def lihatversi(is_secure=False):
+    cmd=f"versi \r\n\r\n"
+    hasil = send_command(cmd,is_secure=is_secure)
+    return hasil
+    
+
+
 if __name__=='__main__':
-    h = getdatapemain(1)
-    print(h['nama'],h['nomor'])
-    h = getdatapemain(2)
-    print(h['nama'],h['nomor'])
+    h = lihatversi(is_secure=False)
+    if (h):
+        print(h)
+
+    h = getdatapemain(1,is_secure=False)
+    if (h):
+        print(h['nama'],h['nomor'])
+    else:
+        print("kegagalan pada data transfer")
+
+    h = getdatapemain(2,is_secure=False)
+    if (h):
+        print(h['nama'],h['nomor'])
+    else:
+        print("kegagalan pada data transfer")
+
+#     h = getdatapemain(3,is_secure=False)
+#     if (h):
+#         print(h['nama'],h['nomor'])
+#     else:
+#         print("kegagalan pada data transfer")
+
+#     h = getdatapemain(4,is_secure=False)
+#     if (h):
+#         print(h['nama'],h['nomor'])
+#     else:
+#         print("kegagalan pada data transfer")
