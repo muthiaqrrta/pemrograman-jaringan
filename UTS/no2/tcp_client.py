@@ -5,6 +5,10 @@ import logging
 import xmltodict
 import ssl
 import os
+import random
+import time
+import datetime
+import threading
 
 server_address = ('172.16.16.101', 12000)
 
@@ -89,33 +93,26 @@ def lihatversi(is_secure=False):
     hasil = send_command(cmd,is_secure=is_secure)
     return hasil
     
+def getdatapemain_multithread(req_num):
+    texec = dict()
+    
+    catat_awal = datetime.datetime.now()
+    for k in range(req_num):
+        texec[k] = threading.Thread(target=getdatapemain, args=(random.randint(1, 20),))
+        texec[k].start()
+
+    for k in range(req_num):
+        texec[k].join()
+
+    catat_akhir = datetime.datetime.now()
+    selesai = catat_akhir - catat_awal
+    print(f"Waktu TOTAL yang dibutuhkan {selesai} detik {catat_awal} s/d {catat_akhir}")
+    # return selesai
 
 
-if __name__=='__main__':
-    h = lihatversi(is_secure=False)
-    if (h):
-        print(h)
-
-    h = getdatapemain(1,is_secure=False)
-    if (h):
-        print(h['nama'],h['nomor'])
-    else:
-        print("kegagalan pada data transfer")
-
-    h = getdatapemain(2,is_secure=False)
-    if (h):
-        print(h['nama'],h['nomor'])
-    else:
-        print("kegagalan pada data transfer")
-
-#     h = getdatapemain(3,is_secure=False)
-#     if (h):
-#         print(h['nama'],h['nomor'])
-#     else:
-#         print("kegagalan pada data transfer")
-
-#     h = getdatapemain(4,is_secure=False)
-#     if (h):
-#         print(h['nama'],h['nomor'])
-#     else:
-#         print("kegagalan pada data transfer")
+if __name__ == "__main__":
+    # print("Waktu yang dibutuhkan: ", multithread(20))
+    # getdatapemain_multithread(1)
+    # getdatapemain_multithread(5)
+    # getdatapemain_multithread(10)
+    getdatapemain_multithread(20)
